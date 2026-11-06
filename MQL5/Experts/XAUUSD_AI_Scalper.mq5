@@ -5,7 +5,7 @@
   | Attach to the broker's gold chart (e.g. XAUUSDn), timeframe M1.
   +------------------------------------------------------------------+*/
 #property strict
-#property version   "0.10"
+#property version   "0.100"
 #property description "Signal-only XAUUSD scalping research EA. No orders are sent."
 
 input int      InpFastEMA          = 9;
