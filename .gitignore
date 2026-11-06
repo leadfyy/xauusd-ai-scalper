@@ -1,0 +1,6 @@
+# MetaTrader build and local files
+*.ex5
+*.log
+*.set
+*.ini
+*.dat
