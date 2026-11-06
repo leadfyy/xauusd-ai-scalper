@@ -336,30 +336,20 @@ void PublishStatus(const SignalType signal,const string reason,
    if(InpShowChartComment)
    {
       Comment(
-         "XAUUSD AI SCALPER 1.00
-",
-         "MODE: ",mode,"
-",
-         "Symbol: ",_Symbol,"  Signal timeframe: M1
-",
-         "Signal: ",SignalToString(signal),"
-",
-         "Reason: ",reason,"
-",
+         "XAUUSD AI SCALPER 1.10\n",
+         "MODE: ",mode,"\n",
+         "Symbol: ",_Symbol,"  Signal timeframe: M1\n",
+         "Signal: ",SignalToString(signal),"\n",
+         "Reason: ",reason,"\n",
          "EMA ",InpFastEMA,": ",DoubleToString(fastEMA,_Digits),
-         " | EMA ",InpSlowEMA,": ",DoubleToString(slowEMA,_Digits),"
-",
+         " | EMA ",InpSlowEMA,": ",DoubleToString(slowEMA,_Digits),"\n",
          "RSI(",InpRSIPeriod,"): ",DoubleToString(rsi,2),
-         " | ATR(",InpATRPeriod,"): ",DoubleToString(atr,_Digits),"
-",
-         "Spread: ",DoubleToString(spread,1)," points
-",
+         " | ATR(",InpATRPeriod,"): ",DoubleToString(atr,_Digits),"\n",
+         "Spread: ",DoubleToString(spread,1)," points\n",
          "Balance: ",DoubleToString(balance,2)," ",currency,
-         " | Equity: ",DoubleToString(equity,2)," ",currency,"
-",
+         " | Equity: ",DoubleToString(equity,2)," ",currency,"\n",
          "EA daily P/L: ",DoubleToString(dailyPnl,2)," ",currency,
-         " | Entries today: ",tradesToday,"/",InpMaxTradesPerDay,"
-",
+         " | Entries today: ",tradesToday,"/",InpMaxTradesPerDay,"\n",
          "Risk/trade: ",DoubleToString(InpRiskPerTradePct,2),
          "% | Daily loss cap: ",DoubleToString(InpMaxDailyLossPct,2),"%"
       );
