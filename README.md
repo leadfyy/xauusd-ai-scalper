@@ -2,56 +2,60 @@
 
 Native MetaTrader 5 Expert Advisor for XAUUSD and broker-specific gold symbols.
 
-## Current build: guarded demo execution (orders OFF by default)
+## Version 1.10: multi-timeframe trend-filtered research build
 
-The EA evaluates completed M1 candles using:
-- EMA 9 / EMA 21 crossover;
-- RSI 14 confirmation;
-- maximum spread filter;
-- ATR 14 for volatility-adjusted stop distance.
+The entry logic now requires several conditions on **completed candles**:
+- M1 EMA 9/21 crossover and RSI 14 confirmation;
+- M5 EMA 50/200 trend alignment;
+- M15 EMA 50/200 trend alignment in the same direction;
+- M5 ADX 14 at or above the configured minimum (default 20);
+- spread below the configured ceiling.
 
-The EA can submit orders only when **both** conditions are true:
-1. `InpEnableDemoTrading=true` in the EA inputs; and
-2. the connected MT5 account is a **DEMO** account.
+This is a trend-alignment filter intended to avoid taking every M1 crossover against the broader intraday trend. It may reduce the number of trades; it is a hypothesis to test, not a proven profitable edge.
 
-A non-demo account is blocked in code. The default is `InpEnableDemoTrading=false`, so the EA starts in signal-only mode.
+## Execution and safety
 
-## Safety controls and defaults
+Orders are OFF by default. The EA can submit orders only when:
+1. `InpEnableDemoTrading=true`; and
+2. the connected account is a **DEMO** account.
+
+The code blocks order execution on non-demo accounts. Keep execution disabled on the live chart. In Strategy Tester, enabling the input runs simulated tester trades, not orders on the connected account.
+
+## Risk controls
 
 | Input | Default | Purpose |
 |---|---:|---|
-| InpEnableDemoTrading | false | Master execution switch; OFF by default |
-| InpRiskPerTradePct | 0.25 | Equity risk budget per trade; maximum accepted input is 1% |
-| InpMaxDailyLossPct | 2.0 | Blocks new entries after EA daily P/L reaches this loss threshold; maximum accepted input is 5% |
+| InpEnableDemoTrading | false | Master execution switch |
+| InpRiskPerTradePct | 0.25 | Equity risk budget per trade; maximum accepted input 1% |
+| InpMaxDailyLossPct | 2.0 | Blocks new entries after EA daily P/L reaches this threshold; maximum accepted input 5% |
 | InpMaxTradesPerDay | 3 | Maximum EA entries per broker day |
-| InpATRStopMultiplier | 1.5 | ATR-based minimum stop distance |
-| InpRewardRiskRatio | 1.5 | Take-profit distance relative to stop distance |
-| InpMaxSpreadPoints | 80 | Spread ceiling; must be validated for the broker |
-| InpDeviationPoints | 30 | Maximum price deviation requested |
+| InpATRStopMultiplier | 1.5 | ATR-based stop distance |
+| InpRewardRiskRatio | 1.5 | Target distance relative to stop |
+| InpMaxSpreadPoints | 80 | Spread ceiling; validate against broker conditions |
+| InpMinADX | 20 | Minimum M5 ADX for trend-strength filter |
+| InpTrendFastEMA / SlowEMA | 50 / 200 | M5 and M15 trend direction |
 | InpMagicNumber | 26110601 | Identifies this EA's positions and deals |
 
-Position size is calculated from equity, the configured risk percentage, and the estimated loss at the stop price using `OrderCalcProfit`. If the calculated volume is below the broker's minimum lot, the EA skips the trade rather than rounding volume up and exceeding the risk budget.
+Volume is calculated using `OrderCalcProfit` and rounded DOWN to the broker's volume step. If the safe size is below minimum lot, the trade is skipped. The EA permits one open position per symbol/magic number and does not use martingale, grid, or averaging down.
 
-The EA allows only one open position per symbol/magic number. It does not average down, martingale, grid, or increase position size after losses. Stop Loss and Take Profit are sent with the entry request. The daily loss lock blocks new entries; it does not forcibly close an existing position.
+The daily loss lock blocks new entries; it does not forcibly close an open position. Stop-loss orders do not guarantee exact exit prices during gaps or abnormal execution.
 
 ## Install / update
 
-1. In MT5, open MetaEditor with F4.
+1. Open MetaEditor with F4.
 2. Open `MQL5/Experts/XAUUSD_AI_Scalper.mq5`.
-3. Replace its contents with the latest file from this repository, or download the file and overwrite the old copy in the MT5 data folder's `MQL5/Experts` directory.
+3. Replace the old source with the latest version from this repository.
 4. Compile with F7 and confirm **0 errors**.
-5. In MT5, right-click Expert Advisors in Navigator and choose Refresh.
-6. Attach the EA to the broker's XAUUSD M1 chart.
+5. In MT5, refresh Expert Advisors in Navigator and attach the EA to XAUUSD M1.
 
-## Safe first run
+Repository: https://github.com/leadfyy/xauusd-ai-scalper
 
-- Keep Algo Trading OFF and leave `InpEnableDemoTrading=false` for the first compile and visual check.
-- Verify the account is the intended demo account, the chart symbol is the broker's gold instrument, and the spread ceiling is sensible for that symbol.
-- Only after a successful compile and review of the broker's symbol properties should demo order execution be considered. If enabled, it remains code-blocked on non-demo accounts.
-- Do not use this EA on a live account. Do not treat backtests or demo results as evidence of future profitability.
+## Validation protocol
 
-## Important limitations
+1. Backtest on real ticks with realistic/random execution delay and commission where available.
+2. Use separate in-sample and out-of-sample date ranges; do not optimize on the entire history and report that as validation.
+3. Check profit factor, expected payoff, max equity drawdown, number of trades, and stability by month.
+4. Forward-test on a demo account for several weeks after the historical tests.
+5. Do not move to live trading based only on one backtest or a high net-profit figure.
 
-This is a rule-based technical strategy, not a machine-learning model and not a prediction system. It evaluates a signal once per newly closed M1 candle. No profitability is claimed. The ATR stop, spread ceiling, tick value, contract size, commission, slippage, broker execution and market gaps all affect actual risk. A stop loss does not guarantee the exact exit price during gaps or abnormal execution.
-
-Before any live deployment (not recommended), the strategy would require robust historical tick backtesting, out-of-sample testing, forward demo testing, and independent risk review.
+This is a rule-based technical strategy, not an AI prediction model. No profitability is claimed or guaranteed. XAUUSD scalping carries substantial execution, leverage, spread, slippage, and market-gap risk.
