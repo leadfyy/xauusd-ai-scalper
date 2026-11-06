@@ -336,20 +336,30 @@ void PublishStatus(const SignalType signal,const string reason,
    if(InpShowChartComment)
    {
       Comment(
-         "XAUUSD AI SCALPER 1.00\n",
-         "MODE: ",mode,"\n",
-         "Symbol: ",_Symbol,"  Signal timeframe: M1\n",
-         "Signal: ",SignalToString(signal),"\n",
-         "Reason: ",reason,"\n",
+         "XAUUSD AI SCALPER 1.00
+",
+         "MODE: ",mode,"
+",
+         "Symbol: ",_Symbol,"  Signal timeframe: M1
+",
+         "Signal: ",SignalToString(signal),"
+",
+         "Reason: ",reason,"
+",
          "EMA ",InpFastEMA,": ",DoubleToString(fastEMA,_Digits),
-         " | EMA ",InpSlowEMA,": ",DoubleToString(slowEMA,_Digits),"\n",
+         " | EMA ",InpSlowEMA,": ",DoubleToString(slowEMA,_Digits),"
+",
          "RSI(",InpRSIPeriod,"): ",DoubleToString(rsi,2),
-         " | ATR(",InpATRPeriod,"): ",DoubleToString(atr,_Digits),"\n",
-         "Spread: ",DoubleToString(spread,1)," points\n",
+         " | ATR(",InpATRPeriod,"): ",DoubleToString(atr,_Digits),"
+",
+         "Spread: ",DoubleToString(spread,1)," points
+",
          "Balance: ",DoubleToString(balance,2)," ",currency,
-         " | Equity: ",DoubleToString(equity,2)," ",currency,"\n",
+         " | Equity: ",DoubleToString(equity,2)," ",currency,"
+",
          "EA daily P/L: ",DoubleToString(dailyPnl,2)," ",currency,
-         " | Entries today: ",tradesToday,"/",InpMaxTradesPerDay,"\n",
+         " | Entries today: ",tradesToday,"/",InpMaxTradesPerDay,"
+",
          "Risk/trade: ",DoubleToString(InpRiskPerTradePct,2),
          "% | Daily loss cap: ",DoubleToString(InpMaxDailyLossPct,2),"%"
       );
@@ -364,7 +374,9 @@ void PublishStatus(const SignalType signal,const string reason,
 int OnInit()
 {
    if(InpFastEMA<=0 || InpSlowEMA<=0 || InpRSIPeriod<=0 || InpATRPeriod<=0 ||
-      InpFastEMA>=InpSlowEMA || InpTrendFastEMA>=InpTrendSlowEMA ||\n      InpTrendFastEMA<=0 || InpTrendSlowEMA<=0 || InpADXPeriod<=0 ||\n      InpMinADX<0.0 || InpMaxSpreadPoints<=0.0 ||
+      InpFastEMA>=InpSlowEMA || InpTrendFastEMA>=InpTrendSlowEMA ||
+      InpTrendFastEMA<=0 || InpTrendSlowEMA<=0 || InpADXPeriod<=0 ||
+      InpMinADX<0.0 || InpMaxSpreadPoints<=0.0 ||
       InpRiskPerTradePct<=0.0 || InpRiskPerTradePct>1.0 ||
       InpMaxDailyLossPct<=0.0 || InpMaxDailyLossPct>5.0 ||
       InpMaxTradesPerDay<1 || InpATRStopMultiplier<=0.0 ||
@@ -385,7 +397,10 @@ int OnInit()
    g_m15SlowHandle=iMA(_Symbol,PERIOD_M15,InpTrendSlowEMA,0,MODE_EMA,PRICE_CLOSE);
 
    if(g_fastHandle==INVALID_HANDLE || g_slowHandle==INVALID_HANDLE ||
-      g_rsiHandle==INVALID_HANDLE || g_atrHandle==INVALID_HANDLE ||\n      g_m5FastHandle==INVALID_HANDLE || g_m5SlowHandle==INVALID_HANDLE ||\n      g_m5AdxHandle==INVALID_HANDLE || g_m15FastHandle==INVALID_HANDLE ||\n      g_m15SlowHandle==INVALID_HANDLE)
+      g_rsiHandle==INVALID_HANDLE || g_atrHandle==INVALID_HANDLE ||
+      g_m5FastHandle==INVALID_HANDLE || g_m5SlowHandle==INVALID_HANDLE ||
+      g_m5AdxHandle==INVALID_HANDLE || g_m15FastHandle==INVALID_HANDLE ||
+      g_m15SlowHandle==INVALID_HANDLE)
    {
       Print("Failed to create indicator handles. Error=",GetLastError());
       return INIT_FAILED;
