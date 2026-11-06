@@ -1,50 +1,57 @@
 # XAUUSD AI Scalper
 
-Native MetaTrader 5 Expert Advisor project for XAUUSD / broker-suffixed gold symbols.
+Native MetaTrader 5 Expert Advisor for XAUUSD and broker-specific gold symbols.
 
-## Current stage: research EA (no order execution)
+## Current build: guarded demo execution (orders OFF by default)
 
-This first commit is deliberately **signal-only**. It:
-- discovers the chart symbol (attach it to the broker's gold chart, e.g. `XAUUSDn`);
-- reads live ticks and closed M1 candles;
-- calculates EMA 9 / EMA 21 and RSI 14;
-- evaluates a candidate signal once per newly closed M1 candle;
-- rejects signals when the spread exceeds the configured limit;
-- displays account balance/equity and writes signal details to the Experts log.
+The EA evaluates completed M1 candles using:
+- EMA 9 / EMA 21 crossover;
+- RSI 14 confirmation;
+- maximum spread filter;
+- ATR 14 for volatility-adjusted stop distance.
 
-It does **not** send, modify, or close orders. No profitability is claimed.
+The EA can submit orders only when **both** conditions are true:
+1. `InpEnableDemoTrading=true` in the EA inputs; and
+2. the connected MT5 account is a **DEMO** account.
 
-## Install
+A non-demo account is blocked in code. The default is `InpEnableDemoTrading=false`, so the EA starts in signal-only mode.
 
-1. Open MetaTrader 5.
-2. Press `F4` to open MetaEditor.
-3. In MetaEditor, create/open an Expert Advisor under `MQL5/Experts`.
-4. Copy `MQL5/Experts/XAUUSD_AI_Scalper.mq5` into that folder (or open it from the repository's local clone).
-5. Compile with F7.
-6. In MT5, open the broker's gold chart (for example `XAUUSDn`), select M1, and attach the EA.
-7. Keep Algo Trading disabled for this signal-only build; enable only chart updates/EA permissions as required by MT5.
+## Safety controls and defaults
 
-## Initial configuration
-
-| Input | Default | Meaning |
+| Input | Default | Purpose |
 |---|---:|---|
-| InpFastEMA | 9 | Fast EMA period |
-| InpSlowEMA | 21 | Slow EMA period |
-| InpRSIPeriod | 14 | RSI period |
-| InpMaxSpreadPoints | 80 | Placeholder spread ceiling; calibrate to broker |
-| InpRSIBuyMin / Max | 50 / 70 | RSI confirmation range for BUY setup |
-| InpRSISellMin / Max | 30 / 50 | RSI confirmation range for SELL setup |
+| InpEnableDemoTrading | false | Master execution switch; OFF by default |
+| InpRiskPerTradePct | 0.25 | Equity risk budget per trade; maximum accepted input is 1% |
+| InpMaxDailyLossPct | 2.0 | Blocks new entries after EA daily P/L reaches this loss threshold; maximum accepted input is 5% |
+| InpMaxTradesPerDay | 3 | Maximum EA entries per broker day |
+| InpATRStopMultiplier | 1.5 | ATR-based minimum stop distance |
+| InpRewardRiskRatio | 1.5 | Take-profit distance relative to stop distance |
+| InpMaxSpreadPoints | 80 | Spread ceiling; must be validated for the broker |
+| InpDeviationPoints | 30 | Maximum price deviation requested |
+| InpMagicNumber | 26110601 | Identifies this EA's positions and deals |
 
-The EA reads the actual account balance and currency from MT5. The intended demo balance is **3,000 USD**, but the program never edits or assumes the account balance.
+Position size is calculated from equity, the configured risk percentage, and the estimated loss at the stop price using `OrderCalcProfit`. If the calculated volume is below the broker's minimum lot, the EA skips the trade rather than rounding volume up and exceeding the risk budget.
 
-## Roadmap
+The EA allows only one open position per symbol/magic number. It does not average down, martingale, grid, or increase position size after losses. Stop Loss and Take Profit are sent with the entry request. The daily loss lock blocks new entries; it does not forcibly close an existing position.
 
-1. Validate broker's exact symbol specification (digits, point, tick size/value, contract size, volume min/step/max, spread, commission).
-2. Collect and test tick data with realistic spread, commission, slippage and execution assumptions.
-3. Add a demo-only execution module with strict sizing, SL/TP, max daily loss, max positions and kill switch.
-4. Add optional dashboard/reporting.
-5. Consider any live trading only after robust out-of-sample validation.
+## Install / update
 
-## Risk note
+1. In MT5, open MetaEditor with F4.
+2. Open `MQL5/Experts/XAUUSD_AI_Scalper.mq5`.
+3. Replace its contents with the latest file from this repository, or download the file and overwrite the old copy in the MT5 data folder's `MQL5/Experts` directory.
+4. Compile with F7 and confirm **0 errors**.
+5. In MT5, right-click Expert Advisors in Navigator and choose Refresh.
+6. Attach the EA to the broker's XAUUSD M1 chart.
 
-Gold scalping has substantial execution and leverage risk. A 3,000 USD demo balance is not a reason to use high risk. Backtests and demo results do not guarantee future performance.
+## Safe first run
+
+- Keep Algo Trading OFF and leave `InpEnableDemoTrading=false` for the first compile and visual check.
+- Verify the account is the intended demo account, the chart symbol is the broker's gold instrument, and the spread ceiling is sensible for that symbol.
+- Only after a successful compile and review of the broker's symbol properties should demo order execution be considered. If enabled, it remains code-blocked on non-demo accounts.
+- Do not use this EA on a live account. Do not treat backtests or demo results as evidence of future profitability.
+
+## Important limitations
+
+This is a rule-based technical strategy, not a machine-learning model and not a prediction system. It evaluates a signal once per newly closed M1 candle. No profitability is claimed. The ATR stop, spread ceiling, tick value, contract size, commission, slippage, broker execution and market gaps all affect actual risk. A stop loss does not guarantee the exact exit price during gaps or abnormal execution.
+
+Before any live deployment (not recommended), the strategy would require robust historical tick backtesting, out-of-sample testing, forward demo testing, and independent risk review.
