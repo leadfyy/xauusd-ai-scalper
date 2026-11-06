@@ -4,8 +4,8 @@
 //| Orders are OFF by default and are blocked on non-demo accounts.  |
 //+------------------------------------------------------------------+
 #property strict
-#property version   "1.00"
-#property description "XAUUSD M1 EA with demo-only guarded execution; trading disabled by default."
+#property version   "1.10"
+#property description "Multi-timeframe XAUUSD trend-filtered EA; demo-only guarded execution, OFF by default."
 
 #include <Trade/Trade.mqh>
 
@@ -13,6 +13,10 @@ input int      InpFastEMA              = 9;
 input int      InpSlowEMA              = 21;
 input int      InpRSIPeriod            = 14;
 input int      InpATRPeriod            = 14;
+input int      InpTrendFastEMA          = 50;
+input int      InpTrendSlowEMA          = 200;
+input int      InpADXPeriod             = 14;
+input double   InpMinADX                = 20.0;
 input double   InpMaxSpreadPoints      = 80.0;
 input double   InpRSIBuyMin            = 50.0;
 input double   InpRSIBuyMax            = 70.0;
@@ -34,6 +38,11 @@ int      g_fastHandle = INVALID_HANDLE;
 int      g_slowHandle = INVALID_HANDLE;
 int      g_rsiHandle  = INVALID_HANDLE;
 int      g_atrHandle  = INVALID_HANDLE;
+int      g_m5FastHandle = INVALID_HANDLE;
+int      g_m5SlowHandle = INVALID_HANDLE;
+int      g_m5AdxHandle  = INVALID_HANDLE;
+int      g_m15FastHandle = INVALID_HANDLE;
+int      g_m15SlowHandle = INVALID_HANDLE;
 datetime g_lastClosedBar = 0;
 CTrade   g_trade;
 
@@ -355,7 +364,7 @@ void PublishStatus(const SignalType signal,const string reason,
 int OnInit()
 {
    if(InpFastEMA<=0 || InpSlowEMA<=0 || InpRSIPeriod<=0 || InpATRPeriod<=0 ||
-      InpFastEMA>=InpSlowEMA || InpMaxSpreadPoints<=0.0 ||
+      InpFastEMA>=InpSlowEMA || InpTrendFastEMA>=InpTrendSlowEMA ||\n      InpTrendFastEMA<=0 || InpTrendSlowEMA<=0 || InpADXPeriod<=0 ||\n      InpMinADX<0.0 || InpMaxSpreadPoints<=0.0 ||
       InpRiskPerTradePct<=0.0 || InpRiskPerTradePct>1.0 ||
       InpMaxDailyLossPct<=0.0 || InpMaxDailyLossPct>5.0 ||
       InpMaxTradesPerDay<1 || InpATRStopMultiplier<=0.0 ||
@@ -369,9 +378,14 @@ int OnInit()
    g_slowHandle=iMA(_Symbol,PERIOD_M1,InpSlowEMA,0,MODE_EMA,PRICE_CLOSE);
    g_rsiHandle=iRSI(_Symbol,PERIOD_M1,InpRSIPeriod,PRICE_CLOSE);
    g_atrHandle=iATR(_Symbol,PERIOD_M1,InpATRPeriod);
+   g_m5FastHandle=iMA(_Symbol,PERIOD_M5,InpTrendFastEMA,0,MODE_EMA,PRICE_CLOSE);
+   g_m5SlowHandle=iMA(_Symbol,PERIOD_M5,InpTrendSlowEMA,0,MODE_EMA,PRICE_CLOSE);
+   g_m5AdxHandle=iADX(_Symbol,PERIOD_M5,InpADXPeriod);
+   g_m15FastHandle=iMA(_Symbol,PERIOD_M15,InpTrendFastEMA,0,MODE_EMA,PRICE_CLOSE);
+   g_m15SlowHandle=iMA(_Symbol,PERIOD_M15,InpTrendSlowEMA,0,MODE_EMA,PRICE_CLOSE);
 
    if(g_fastHandle==INVALID_HANDLE || g_slowHandle==INVALID_HANDLE ||
-      g_rsiHandle==INVALID_HANDLE || g_atrHandle==INVALID_HANDLE)
+      g_rsiHandle==INVALID_HANDLE || g_atrHandle==INVALID_HANDLE ||\n      g_m5FastHandle==INVALID_HANDLE || g_m5SlowHandle==INVALID_HANDLE ||\n      g_m5AdxHandle==INVALID_HANDLE || g_m15FastHandle==INVALID_HANDLE ||\n      g_m15SlowHandle==INVALID_HANDLE)
    {
       Print("Failed to create indicator handles. Error=",GetLastError());
       return INIT_FAILED;
@@ -397,6 +411,11 @@ void OnDeinit(const int reason)
    if(g_slowHandle!=INVALID_HANDLE) IndicatorRelease(g_slowHandle);
    if(g_rsiHandle!=INVALID_HANDLE)  IndicatorRelease(g_rsiHandle);
    if(g_atrHandle!=INVALID_HANDLE)  IndicatorRelease(g_atrHandle);
+   if(g_m5FastHandle!=INVALID_HANDLE) IndicatorRelease(g_m5FastHandle);
+   if(g_m5SlowHandle!=INVALID_HANDLE) IndicatorRelease(g_m5SlowHandle);
+   if(g_m5AdxHandle!=INVALID_HANDLE) IndicatorRelease(g_m5AdxHandle);
+   if(g_m15FastHandle!=INVALID_HANDLE) IndicatorRelease(g_m15FastHandle);
+   if(g_m15SlowHandle!=INVALID_HANDLE) IndicatorRelease(g_m15SlowHandle);
    Comment("");
 }
 
@@ -408,14 +427,20 @@ void OnTick()
    g_lastClosedBar=closedBarTime;
 
    double fastCurrent,fastPrevious,slowCurrent,slowPrevious,rsiCurrent,atrCurrent;
+   double m5Fast,m5Slow,m5Adx,m15Fast,m15Slow;
    if(!ReadValue(g_fastHandle,0,1,fastCurrent) ||
       !ReadValue(g_fastHandle,0,2,fastPrevious) ||
       !ReadValue(g_slowHandle,0,1,slowCurrent) ||
       !ReadValue(g_slowHandle,0,2,slowPrevious) ||
       !ReadValue(g_rsiHandle,0,1,rsiCurrent) ||
-      !ReadValue(g_atrHandle,0,1,atrCurrent))
+      !ReadValue(g_atrHandle,0,1,atrCurrent) ||
+      !ReadValue(g_m5FastHandle,0,1,m5Fast) ||
+      !ReadValue(g_m5SlowHandle,0,1,m5Slow) ||
+      !ReadValue(g_m5AdxHandle,0,1,m5Adx) ||
+      !ReadValue(g_m15FastHandle,0,1,m15Fast) ||
+      !ReadValue(g_m15SlowHandle,0,1,m15Slow))
    {
-      PublishStatus(SIGNAL_DATA_WAIT,"Indicator buffers are not ready.",0,0,0,
+      PublishStatus(SIGNAL_DATA_WAIT,"M1/M5/M15 indicator buffers are not ready.",0,0,0,
                     CurrentSpreadPoints(),0);
       return;
    }
@@ -442,15 +467,28 @@ void OnTick()
       bool bullishCross=(fastPrevious<=slowPrevious && fastCurrent>slowCurrent);
       bool bearishCross=(fastPrevious>=slowPrevious && fastCurrent<slowCurrent);
 
-      if(bullishCross && rsiCurrent>=InpRSIBuyMin && rsiCurrent<=InpRSIBuyMax)
+      bool bullishTrend=(m5Fast>m5Slow && m15Fast>m15Slow);
+      bool bearishTrend=(m5Fast<m5Slow && m15Fast<m15Slow);
+      bool trendStrong=(m5Adx>=InpMinADX);
+
+      if(bullishCross && bullishTrend && trendStrong &&
+         rsiCurrent>=InpRSIBuyMin && rsiCurrent<=InpRSIBuyMax)
       {
          signal=SIGNAL_BUY_SETUP;
-         reason="Closed-bar bullish EMA crossover with RSI confirmation.";
+         reason=StringFormat("M1 bullish cross; M5/M15 trend aligned; M5 ADX %.1f >= %.1f.",
+                             m5Adx,InpMinADX);
       }
-      else if(bearishCross && rsiCurrent>=InpRSISellMin && rsiCurrent<=InpRSISellMax)
+      else if(bearishCross && bearishTrend && trendStrong &&
+              rsiCurrent>=InpRSISellMin && rsiCurrent<=InpRSISellMax)
       {
          signal=SIGNAL_SELL_SETUP;
-         reason="Closed-bar bearish EMA crossover with RSI confirmation.";
+         reason=StringFormat("M1 bearish cross; M5/M15 trend aligned; M5 ADX %.1f >= %.1f.",
+                             m5Adx,InpMinADX);
+      }
+      else
+      {
+         reason=StringFormat("Filtered: M5 EMA %.5f/%.5f; M15 EMA %.5f/%.5f; M5 ADX %.1f.",
+                             m5Fast,m5Slow,m15Fast,m15Slow,m5Adx);
       }
    }
 
